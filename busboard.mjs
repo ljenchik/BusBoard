@@ -1,7 +1,24 @@
 import fetch from "node-fetch";
+import readline from "readline-sync";
+
+function validatePostcode(postcode) {
+    postcode = postcode.replace(/\s/g, "");
+    var regex = /^[A-Z]{1,2}[0-9]{1,2} ?[0-9][A-Z]{2}$/i;
+    if  (regex.test(postcode)) {
+        return postcode;
+    }
+    else {
+        console.log("Enter a valid poscode ");
+    }
+}
+
+// Enter a postcode
+console.log("Please enter a postcode: ");
+let postcode = readline.prompt();
+postcode = validatePostcode(postcode);
 
 // Postcode
-let postcode = "RM142XA"
+//let postcode = "RM142XA"
 const postcodeResponse = await fetch(`http://api.postcodes.io/postcodes/${postcode}`); 
 const postcodeDetails = await postcodeResponse.json();
 const lat = postcodeDetails.result.latitude;
@@ -27,5 +44,4 @@ nearestBusStops.forEach(async busStop => {
         console.log(`Bus ${arrival.lineName} to ${arrival.destinationName} arriving in ${arrival.timeToStation} seconds`);
     }
 })
-
 
