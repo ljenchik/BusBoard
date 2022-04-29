@@ -1,47 +1,84 @@
 import fetch from "node-fetch";
 import readline from "readline-sync";
 
-function validatePostcode(postcode) {
-    postcode = postcode.replace(/\s/g, "");
-    var regex = /^[A-Z]{1,2}[0-9]{1,2} ?[0-9][A-Z]{2}$/i;
-    if  (regex.test(postcode)) {
-        return postcode;
+// Input postcode
+console.log("Please enter a postcode: ");
+let postcode = readline.prompt();
+postcode = postcode.replace(/\s/g, "")
+
+// Validate postcode
+let postcodeOk = false
+while (!postcodeOk) {
+    try {
+        const postcodeValid = await fetch(`https://api.postcodes.io/postcodes/${postcode}/validate`);
+        const postcodeValidResponse = await postcodeValid.json();
+        if (!postcodeValidResponse.result) {
+            throw new Error ("Invalid postcode")
+        }
+        postcodeOk = true
+    } 
+    catch (err) {
+        console.log("Invalid postcode, try again")
+        console.log("Please enter a valid postcode: ");
+        postcode = readline.prompt();
+        postcode = postcode.replace(/\s/g, "")
     }
-    else {
-        console.log("Enter a valid poscode ");
+} 
+
+// Get bus stop latitude and longitude from postcode
+const postcodeResponse = await fetch(`https://api.postcodes.io/postcodes/${postcode}`);
+const postcodeDetails = await postcodeResponse.json();
+const lat = postcodeDetails.result.latitude;
+const long = postcodeDetails.result.longitude;
+
+// Bus Stop (error if there is no bus stop in radius of 500m)
+let busStopDetails;
+try {
+    const busStopResponse = await fetch(`https://api.tfl.gov.uk/StopPoint/?lat=${lat}&lon=${long}&stopTypes=NaptanPublicBusCoachTram&radius=500`);
+    busStopDetails = await busStopResponse.json();
+    if (busStopDetails.stopPoints.length === 0) {
+        throw new Error ("No bus stops nearby.")
+    }
+} 
+catch (err) {
+    console.log("There are no bus stops nearby.")
+    throw err;
+}
+busStopDetails.stopPoints.sort((a, b) => a.distance - b.distance);
+
+// Bus arrival times
+for (let j = 0; j < 2; j ++) {
+    let stopCode = (busStopDetails.stopPoints[j].id);
+    const response = await fetch(`https://api.tfl.gov.uk/StopPoint/${stopCode}/Arrivals`);
+    const arrivals = await response.json();
+    try {
+        if (arrivals.length === 0) {
+            throw new Error ("there are no buses coming.")
+        }
+    }
+    catch (err) {
+            console.log("There are no buses coming.")
+            throw err;
+        }
+    
+    arrivals.sort((a, b) => a.timeToStation - b.timeToStation);
+    console.log(`${busStopDetails.stopPoints[j].commonName}`)
+    for (let i = 0; i < arrivals.length; i++) {
+        const arrival = arrivals[i];
+        console.log(`       Bus ${arrival.lineName} to ${arrival.destinationName} arriving in ${timeUnits(arrival.timeToStation)}.`);
     }
 }
 
-// Enter a postcode
-console.log("Please enter a postcode: ");
-let postcode = readline.prompt();
-postcode = validatePostcode(postcode);
 
-// Postcode
-//let postcode = "RM142XA"
-const postcodeResponse = await fetch(`http://api.postcodes.io/postcodes/${postcode}`); 
-const postcodeDetails = await postcodeResponse.json();
-const lat = postcodeDetails.result.latitude;
-const lon = postcodeDetails.result.longitude;
-//console.log(lat);
-//console.log(lon);
-
-// Bus Stops
-const busStopResponse = await fetch(`https://api.tfl.gov.uk/StopPoint/?lat=${lat}&lon=${lon}&stopTypes=NaptanPublicBusCoachTram`);
-const busStopDetails = await busStopResponse.json();
-busStopDetails.stopPoints.sort((a, b) => a.distance - b.distance);
-let nearestBusStops = [busStopDetails.stopPoints[0].id, busStopDetails.stopPoints[1].id]
-//console.log(nearestBusStops);
-
-// Bus arrivals
-
-nearestBusStops.forEach(async busStop => {
-    const response = await fetch(`https://api.tfl.gov.uk/StopPoint/${busStop}/Arrivals`);
-    const arrivals = await response.json();
-    arrivals.sort((a, b) => a.timeToStation - b.timeToStation);
-    for (let i = 0; i < arrivals.length; i++) {
-        const arrival = arrivals[i];
-        console.log(`Bus ${arrival.lineName} to ${arrival.destinationName} arriving in ${arrival.timeToStation} seconds`);
+// Convert seconds to minutes
+function timeUnits(time) {
+    if (time === 1) {
+        return time + " second";
+    } else if (time < 60) {
+        return time + " seconds";
+    } else if (time < 120) {
+        return Math.floor(time/60) + " minute";
+    } else {
+        return Math.floor(time/60) + " minutes";
     }
-})
-
+}
