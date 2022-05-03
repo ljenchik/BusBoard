@@ -1,7 +1,7 @@
 import fetch from "node-fetch";
 import readline from "readline-sync";
 import winston from 'winston';
-
+import { add, formatDistanceToNow } from "date-fns";
 
 // Logging errors
 const { combine, timestamp, printf, align} = winston.format;
@@ -86,9 +86,17 @@ for (let j = 0; j < 2; j ++) {
 
     for (let i = 0; i < arrivals.length; i++) {
         const arrival = arrivals[i];
-        stopsAndArrivals[`${busStopDetails.stopPoints[j].commonName}, ${stopCode}`].push(`       Bus ${arrival.lineName} to ${arrival.destinationName} arriving in ${timeUnits(arrival.timeToStation)}.`);
+        stopsAndArrivals[`${busStopDetails.stopPoints[j].commonName}, ${stopCode}`].push(`       Bus ${arrival.lineName} to 
+        ${arrival.destinationName} arriving in ${
+            formatDistanceToNow(
+                add(new Date(), { seconds: arrival.timeToStation }),
+                new Date(),
+                { includeSeconds: true }
+            )
+        }`);
     }
 } 
+
 const noArrivals = Object.entries(stopsAndArrivals).every(([key, value]) => value.length === 0);
 
 try {
