@@ -2,6 +2,7 @@
   "dependencies": {
     "node-fetch": "^3.2.4",
     "prompt-sync": "^4.2.0",
-    "readline-sync": "^1.4.10"
+    "readline-sync": "^1.4.10",
+    "winston": "^3.7.2"
   }
 }

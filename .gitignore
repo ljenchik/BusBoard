@@ -1,2 +1,4 @@
 node_modules
-busboard_pairing.mjs
+**/*.log
+busboard_example.mjs
+

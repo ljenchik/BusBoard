@@ -1,5 +1,21 @@
 import fetch from "node-fetch";
 import readline from "readline-sync";
+import winston from 'winston';
+
+
+// Logging errors
+const { combine, timestamp, printf, align} = winston.format;
+const logger = winston.createLogger({
+  level: process.env.LOG_LEVEL || 'info',
+  format: combine(
+    timestamp({
+      format: 'YYYY-MM-DD hh:mm:ss A',
+    }),
+    align(),
+    printf((info) => `[${info.timestamp}] ${info.level}: ${info.message}`)
+  ),
+  transports: [new winston.transports.Console(), new winston.transports.File({ filename: 'combined.log' })],
+});
 
 // Input postcode
 console.log("Please enter a postcode: ");
@@ -7,15 +23,25 @@ let postcode = readline.prompt();
 postcode = postcode.replace(/\s/g, "")
 
 // Validate postcode
-let postcodeOk = false
-while (!postcodeOk) {
+let validLondonPostcode = false
+while (!validLondonPostcode) {
+    let postcodeResponse;
     try {
-        const postcodeValid = await fetch(`https://api.postcodes.io/postcodes/${postcode}/validate`);
-        const postcodeValidResponse = await postcodeValid.json();
-        if (!postcodeValidResponse.result) {
+        postcodeResponse = await fetch(`https://api.postcodes.io/postcodes/${postcode}`);
+    } catch (error) {
+        logger.error(`Fetch failed attempting to access https://api.postcodes.io/postcodes/${postcode}`);
+        console.error(`Fetch failed attempting to access https://api.postcodes.io/postcodes/${postcode}`);
+        throw error;
+    }
+
+    try {
+        postcodeResponse = await fetch(`https://api.postcodes.io/postcodes/${postcode}/validate`);
+        const validPostcodeResponse = await postcodeResponse.json();
+        if (!validPostcodeResponse.result) {
+            logger.error(`Invalid postcode: ${postcode}`);
             throw new Error ("Invalid postcode")
         }
-        postcodeOk = true
+        validLondonPostcode = true
     } 
     catch (err) {
         console.log("Invalid postcode, try again")
@@ -37,13 +63,15 @@ try {
     const busStopResponse = await fetch(`https://api.tfl.gov.uk/StopPoint/?lat=${lat}&lon=${long}&stopTypes=NaptanPublicBusCoachTram&radius=500`);
     busStopDetails = await busStopResponse.json();
     if (busStopDetails.stopPoints.length === 0) {
+        logger.error(`No buses nearby ${postcode}`);
         throw new Error ("No bus stops nearby.")
     }
 } 
 catch (err) {
-    console.log("There are no bus stops nearby.")
+    console.log(`There are no bus stops nearby ${postcode}`)
     throw err;
 }
+
 busStopDetails.stopPoints.sort((a, b) => a.distance - b.distance);
 
 // Bus arrival times
@@ -53,7 +81,8 @@ for (let j = 0; j < 2; j ++) {
     const arrivals = await response.json();
     try {
         if (arrivals.length === 0) {
-            throw new Error ("there are no buses coming.")
+            logger.error(`No buses arriving at ${postcode}`);
+            throw new Error ("There are no buses arriving.")
         }
     }
     catch (err) {
