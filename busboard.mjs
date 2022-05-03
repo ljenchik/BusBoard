@@ -82,12 +82,11 @@ for (let j = 0; j < 2; j ++) {
     const response = await fetch(`https://api.tfl.gov.uk/StopPoint/${stopCode}/Arrivals`);
     const arrivals = await response.json();
     arrivals.sort((a, b) => a.timeToStation - b.timeToStation);
-    stopsAndArrivals[`${busStopDetails.stopPoints[j].commonName}, ${stopCode}`] = [];
+    stopsAndArrivals[`${busStopDetails.stopPoints[j].commonName}`] = [];
 
     for (let i = 0; i < arrivals.length; i++) {
         const arrival = arrivals[i];
-        stopsAndArrivals[`${busStopDetails.stopPoints[j].commonName}, ${stopCode}`].push(`       Bus ${arrival.lineName} to 
-        ${arrival.destinationName} arriving in ${
+        stopsAndArrivals[`${busStopDetails.stopPoints[j].commonName}`].push(`    Bus ${arrival.lineName} to ${arrival.destinationName} arriving in ${
             formatDistanceToNow(
                 add(new Date(), { seconds: arrival.timeToStation }),
                 new Date(),
@@ -96,7 +95,6 @@ for (let j = 0; j < 2; j ++) {
         }`);
     }
 } 
-
 const noArrivals = Object.entries(stopsAndArrivals).every(([key, value]) => value.length === 0);
 
 try {
@@ -122,9 +120,11 @@ Object.entries(stopsAndArrivals).forEach(([key, value]) => {
   if (directionsResponse === 'y') {
     const directionsResponse = await fetch(`https://api.tfl.gov.uk/Journey/JourneyResults/${postcode}/to/${busStopDetails.stopPoints[0].id}`);
     const directionsDetails = await directionsResponse.json();
+    console.log(`In order to get to ${directionsDetails.journeys[0].legs[0].arrivalPoint.commonName}`);
     const steps = directionsDetails.journeys[0].legs[0].instruction.steps;
+    
     Object.entries(steps).forEach(([key, value]) => {
-        key == 0 ? console.log(`Continue ${value.skyDirectionDescription.toLowerCase()} along ${value.description}.`) : console.log(`${value.descriptionHeading} ${value.description}.`);
+        key == 0 ? console.log(`${value.descriptionHeading} ${value.description}.`) : console.log(`${value.descriptionHeading} ${value.description}.`);
       })
   }
 
