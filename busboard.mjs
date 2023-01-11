@@ -81,7 +81,7 @@ catch (err) {
 }
 
 let closestTwo = busStopDetails.stopPoints.sort((a, b) => a.distance - b.distance).slice(0, 2);
-console.log(closestTwo);
+//console.log(closestTwo);
 
 // Bus arrival times
 var stopsAndArrivals = {};
