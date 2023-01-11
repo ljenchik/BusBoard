@@ -20,11 +20,17 @@ const logger = winston.createLogger({
 let postcode;
 let postcodeData;
 let validLondonPostcode = false;
+let quit = false;
 
 // Input and Validate postcode
 while (!validLondonPostcode) {
-    console.log("Please enter a postcode: ");
+    console.log("Please enter a postcode or enter 'quit': ");
     postcode = readline.prompt();
+    
+    if (postcode === 'quit') {
+        quit = true;
+        break;
+    }
 
     let postcodeResponse;
     // The Internet connection error
@@ -35,17 +41,7 @@ while (!validLondonPostcode) {
         console.error(`Fetch failed attempting to access https://api.postcodes.io/postcodes/${postcode}`);
         throw error;
     }
-    // Invalid postcode
-    try {
-        if (!postcodeResponse.ok) {
-            logger.error(`Fetch to https://api.postcodes.io/postcodes/${postcode} returned a non-success status code`);
-            throw new Error(`Postcode ${postcode} is not valid`);
-        }
-    } catch (error) {
-        logger.warn(`Asking user to re-enter postcode after non-success fetch`);
-        console.log(`Postcode '${postcode}' is not valid. Please try again.`);
-        continue;
-    }
+
     postcodeData = await postcodeResponse.json();
     // Invalid London postcode
     try {
@@ -61,6 +57,9 @@ while (!validLondonPostcode) {
     validLondonPostcode = true;
 } 
 
+// Continue only if a user doesn't want to quit
+if (quit === false) {
+
 // Get bus stop latitude and longitude from postcode
 const lat = postcodeData.result.latitude;
 const long = postcodeData.result.longitude;
@@ -68,8 +67,9 @@ const long = postcodeData.result.longitude;
 // Bus Stop (error if there is no bus stop in radius of 500m)
 let busStopDetails;
 try {
-    const busStopsResponse = await fetch(`https://api.tfl.gov.uk/StopPoint/?lat=${lat}&lon=${long}&stopTypes=NaptanPublicBusCoachTram&radius=500`);
+    const busStopsResponse = await fetch(`https://api.tfl.gov.uk/StopPoint/?lat=${lat}&lon=${long}&stopTypes=NaptanPublicBusCoachTram&radius=1000`);
     busStopDetails = await busStopsResponse.json();
+
     if (busStopDetails.stopPoints.length === 0) {
         logger.error(`No buses nearby ${postcode}`);
         throw new Error ("No bus stops nearby.")
@@ -100,13 +100,15 @@ for (const stopPoint of closestTwo) {
     }
 
     const arrivals = await arrivalsResponse.json();
-    stopsAndArrivals[`${stopPoint.commonName}`] = [];
+    stopsAndArrivals[`${stopPoint.commonName}, ${stopPoint.indicator}`] = [];
+    //console.log(stopsAndArrivals);
+    
     if (arrivals.length === 0) {
-        console.log(`No arrivals at stop ${stopPoint.commonName}`);
-        logger.info(`No arrivals at stop ${stopPoint.commonName}`);
+        console.log(`No arrivals at stop ${stopPoint.commonName}, ${stopPoint.indicator} during 30 minutes`);
+        logger.info(`No arrivals at stop ${stopPoint.commonName}, ${stopPoint.indicator}`);
     } else {
         for (const arrival of arrivals.sort((a, b) => a.timeToStation - b.timeToStation).slice(0, 5)) {
-            stopsAndArrivals[`${stopPoint.commonName}`].push(`    Bus ${arrival.lineName} to ${arrival.destinationName} arriving in ${
+            stopsAndArrivals[`${stopPoint.commonName}, ${stopPoint.indicator}`].push(`    Bus ${arrival.lineName} to ${arrival.destinationName} arriving in ${
                 formatDistanceToNow(
                     add(new Date(), { seconds: arrival.timeToStation }),
                     new Date(),
@@ -117,9 +119,11 @@ for (const stopPoint of closestTwo) {
     }
 } 
 
+// Display 2 closest stops
+console.log("The nearest bus stops are: ");
 Object.entries(stopsAndArrivals).forEach(([key, value]) => {
-    console.log(key);
-    value.forEach(element => console.log(element));
+        console.log(key);
+        value.forEach(element => console.log(element));
   })
 
   console.log(`Do you need directions to ${Object.keys(stopsAndArrivals)[0]}? y/n`);
@@ -134,3 +138,5 @@ Object.entries(stopsAndArrivals).forEach(([key, value]) => {
         key == 0 ? console.log(`${value.descriptionHeading} ${value.description}.`) : console.log(`${value.descriptionHeading} ${value.description}.`);
       })
   }
+
+}
