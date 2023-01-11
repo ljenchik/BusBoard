@@ -131,11 +131,12 @@ Object.entries(stopsAndArrivals).forEach(([key, value]) => {
   if (directionsReply === 'y') {
     const directionsResponse = await fetch(`https://api.tfl.gov.uk/Journey/JourneyResults/${postcode}/to/${closestTwo[0].id}`);
     const directionsDetails = await directionsResponse.json();
-    console.log(`Directions to ${directionsDetails.journeys[0].legs[0].arrivalPoint.commonName}`);
+    //console.log(directionsDetails);
+    console.log(`Directions to ${Object.keys(stopsAndArrivals)[0]}:`);
     const steps = directionsDetails.journeys[0].legs[0].instruction.steps;
-    
+    //console.log(steps);
     Object.entries(steps).forEach(([key, value]) => {
-        key == 0 ? console.log(`${value.descriptionHeading} ${value.description}.`) : console.log(`${value.descriptionHeading} ${value.description}.`);
+       console.log(`${value.descriptionHeading}${value.description} in ${value.skyDirectionDescription} direction.`);
       })
   }
 
