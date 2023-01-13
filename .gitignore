@@ -1,5 +1,6 @@
 node_modules
 **/*.log
 busboard_example.mjs
-.DS_Store
+**/.DS_Store
 
+nw2 

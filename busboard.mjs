@@ -12,7 +12,7 @@ const logger = winston.createLogger({
       format: 'YYYY-MM-DD hh:mm:ss A',
     }),
     align(),
-    printf((info) => `[${info.timestamp}] ${info.level}: ${info.message}`)
+   // printf((info) => `[${info.timestamp}] ${info.level}: ${info.message}`)
   ),
   transports: [new winston.transports.Console(), new winston.transports.File({ filename: 'combined.log' })],
 });
@@ -104,8 +104,8 @@ for (const stopPoint of closestTwo) {
     //console.log(stopsAndArrivals);
     
     if (arrivals.length === 0) {
-        console.log(`No arrivals at stop ${stopPoint.commonName}, ${stopPoint.indicator} during 30 minutes`);
-        logger.info(`No arrivals at stop ${stopPoint.commonName}, ${stopPoint.indicator}`);
+        console.log(`No arrivals at stop ${stopPoint.commonName}, ${stopPoint.indicator} in 30 minutes`);
+        //logger.info(`No arrivals at stop ${stopPoint.commonName}, ${stopPoint.indicator}`);
     } else {
         for (const arrival of arrivals.sort((a, b) => a.timeToStation - b.timeToStation).slice(0, 5)) {
             stopsAndArrivals[`${stopPoint.commonName}, ${stopPoint.indicator}`].push(`    Bus ${arrival.lineName} to ${arrival.destinationName} arriving in ${
@@ -136,7 +136,7 @@ Object.entries(stopsAndArrivals).forEach(([key, value]) => {
     const steps = directionsDetails.journeys[0].legs[0].instruction.steps;
     //console.log(steps);
     Object.entries(steps).forEach(([key, value]) => {
-       console.log(`${value.descriptionHeading}${value.description} in ${value.skyDirectionDescription} direction.`);
+       console.log(`${value.descriptionHeading}${value.description} in the ${value.skyDirectionDescription.toLowerCase()} direction.`);
       })
   }
 
